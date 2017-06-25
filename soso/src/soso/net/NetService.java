@@ -82,7 +82,7 @@ public class NetService<T> {
     }
 
     private String convert2params(Map<String, String> map) {
-        if (Utils.isCollectionsEmpty(map)) {
+        if (Utils.isEmpty(map)) {
             return "";
         }
         Set<Map.Entry<String, String>> sets = map.entrySet();

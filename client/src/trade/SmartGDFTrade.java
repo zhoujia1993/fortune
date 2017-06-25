@@ -23,7 +23,7 @@ public class SmartGDFTrade implements DealHandle {
     @Override
     public void onDealBuy(CoinInfo coinInfo, int id, String amount, String price) {
         if (!buyOrders.containsKey(id)) {
-            amount = String.valueOf(100);
+            amount = String.valueOf(10);
             buyOrders.put(id, YunBi.getInstance().createOrder(market, amount, price, true));
             System.out.println("购买了" + amount + "数量，价格=" + price);
         }
@@ -41,8 +41,9 @@ public class SmartGDFTrade implements DealHandle {
                 if (queryOrder != null) {
                     if (queryOrder.isWait()) {
                         queryOrder = YunBi.getInstance().cancelOrder(String.valueOf(queryOrder.id));
-                        sellOrder = YunBi.getInstance().createOrder(market, String.valueOf(Double.valueOf(queryOrder.volume) - Double.valueOf(queryOrder.remainVolume)), price, false);
-                        sellOrders.put(id, sellOrder);
+                        if(queryOrder!=null){
+                        sellOrder = YunBi.getInstance().createOrder(market, String.valueOf(Double.valueOf(queryOrder.volume)), price, false);
+                        sellOrders.put(id, sellOrder);}
                     }
                 }
 
@@ -68,7 +69,7 @@ public class SmartGDFTrade implements DealHandle {
 
     @Override
     public void onDealBuyCancel(CoinInfo coinInfo, int id, String amount, String price) {
-        if (!buyOrders.containsKey(id)) {
+        if (!buyOrders.containsKey(id) || buyOrders.get(id) == null) {
             return;
         }
         YunBi.getInstance().cancelOrder(String.valueOf(buyOrders.get(id).id));
@@ -84,7 +85,7 @@ public class SmartGDFTrade implements DealHandle {
 
     @Override
     public int onDealBuyQuery(CoinInfo coinInfo, int id) {
-        if (buyOrders.containsKey(id)) {
+        if (buyOrders.containsKey(id) && buyOrders.get(id) != null) {
             Order order = YunBi.getInstance().queryOrder(String.valueOf(buyOrders.get(id).id));
             if (order != null) {
                 return order.getState();
@@ -99,7 +100,7 @@ public class SmartGDFTrade implements DealHandle {
 
     @Override
     public int onDealSellQuery(CoinInfo coinInfo, int id) {
-        if (sellOrders.containsKey(id)) {
+        if (sellOrders.containsKey(id) && sellOrders.get(id) != null) {
             Order order = YunBi.getInstance().queryOrder(String.valueOf(sellOrders.get(id).id));
             if (order != null) {
                 return order.getState();
