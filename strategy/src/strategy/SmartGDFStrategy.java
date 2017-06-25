@@ -41,7 +41,7 @@ public class SmartGDFStrategy implements Strategy {
         if (kLine == null) {
             return false;
         }
-        DecimalFormat df = new DecimalFormat(".0000000");
+        DecimalFormat df = new DecimalFormat(".00000");
         List<KLine.Data> kLineData = kLine.datas;
         double[] ema12 = StrategyUtils.getCloseEMA(kLine, 2, 7);
 //            System.out.println(Arrays.toString(ema12));

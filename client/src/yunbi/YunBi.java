@@ -15,6 +15,7 @@ import java.util.List;
 public class YunBi {
 
     private List<Markets> markets;
+    private static final int MAX = 5;
 
     private YunBi() {
 
@@ -55,33 +56,48 @@ public class YunBi {
     }
 
     public Order createOrder(String market, String amount, String price, boolean buy) {
-        NameValuePair params = new NameValuePair();
-        params.put("access_key", Config.ACCESS_KEY).put("market", market)
-                .put("price", price)
-                .put("side", buy ? "buy" : "sell")
-                .put("tonce", String.valueOf(System.currentTimeMillis()))
-                .put("volume", amount);
-        Order order = new YunBiNetService<Order>().request(Method.POST, "/api/v2/orders.json", params, true, Order.class);
-        System.out.println("创建单子:" + (order != null ? order.toString() : ""));
+        int count = 0;
+        Order order = null;
+        do {
+            NameValuePair params = new NameValuePair();
+            params.put("access_key", Config.ACCESS_KEY).put("market", market)
+                    .put("price", price)
+                    .put("side", buy ? "buy" : "sell")
+                    .put("tonce", String.valueOf(System.currentTimeMillis()))
+                    .put("volume", amount);
+            order = new YunBiNetService<Order>().request(Method.POST, "/api/v2/orders.json", params, true, Order.class);
+            System.out.println("创建单子:" + (order != null ? order.toString() : ""));
+            count++;
+        } while (order == null && count <= MAX);
         return order;
 //        return null;
     }
 
     public Order queryOrder(String id) {
-        NameValuePair params = new NameValuePair();
-        params.put("access_key", Config.ACCESS_KEY).put("id", id)
-                .put("tonce", String.valueOf(System.currentTimeMillis()));
-        Order order = new YunBiNetService<Order>().request(Method.GET, "/api/v2/order.json", params, true, Order.class);
-        System.out.println("查询单子:" + (order != null ? order.toString() : ""));
+        int count = 0;
+        Order order = null;
+        do {
+            NameValuePair params = new NameValuePair();
+            params.put("access_key", Config.ACCESS_KEY).put("id", id)
+                    .put("tonce", String.valueOf(System.currentTimeMillis()));
+            order = new YunBiNetService<Order>().request(Method.GET, "/api/v2/order.json", params, true, Order.class);
+            System.out.println("查询单子:" + (order != null ? order.toString() : ""));
+            count++;
+        } while (order == null && count <= MAX);
         return order;
     }
 
     public Order cancelOrder(String id) {
-        NameValuePair params = new NameValuePair();
-        params.put("access_key", Config.ACCESS_KEY).put("id", id)
-                .put("tonce", String.valueOf(System.currentTimeMillis()));
-        Order order = new YunBiNetService<Order>().request(Method.POST, "/api/v2/order/delete.json", params, true, Order.class);
-        System.out.println("取消单子:" + (order != null ? order.toString() : ""));
+        int count = 0;
+        Order order = null;
+        do {
+            NameValuePair params = new NameValuePair();
+            params.put("access_key", Config.ACCESS_KEY).put("id", id)
+                    .put("tonce", String.valueOf(System.currentTimeMillis()));
+            order = new YunBiNetService<Order>().request(Method.POST, "/api/v2/order/delete.json", params, true, Order.class);
+            System.out.println("取消单子:" + (order != null ? order.toString() : ""));
+            count++;
+        } while (order == null && count <= MAX);
         return order;
     }
 
