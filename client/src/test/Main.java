@@ -5,7 +5,7 @@ import soso.CoinInfo;
 import soso.DataCenter;
 import soso.Dimension;
 import soso.strategydeal.StrategyDealWrapper;
-import strategy.SmartGDFStrategy;
+import strategy.TradeInfoStrategy;
 import trade.SmartGDFTrade;
 import yunbi.YunBi;
 
@@ -19,7 +19,8 @@ public class Main {
      */
     public static void main(String[] args) {
         CoinInfo coinInfo = new CoinInfo("cn", "yunbi", "sc", "yunbi_sc", Dimension.MIN_1.getType());
-        Coin.getInstance().registerStrategy(coinInfo, new StrategyDealWrapper(new SmartGDFStrategy("sc模拟" + Dimension.MIN_1.getName(), 0.002), new SmartGDFTrade("sccny")));
+//        Coin.getInstance().registerStrategy(coinInfo, new StrategyDealWrapper(new SmartGDFStrategy("sc模拟" + Dimension.MIN_1.getName(), 0.002), new SmartGDFTrade("sccny")));
+        Coin.getInstance().registerStrategy(coinInfo, new StrategyDealWrapper(new TradeInfoStrategy(500000,500000),  new SmartGDFTrade("sccny")));
         YunBi.getInstance().init();
         new DataCenter().start();
     }

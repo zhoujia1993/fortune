@@ -9,6 +9,7 @@ import soso.strategydeal.DealHandle;
 import soso.strategydeal.Strategy;
 
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -29,7 +30,8 @@ public class TradeInfoStrategy implements Strategy {
     private boolean isBuy;
     private int id = 0;
     private double RATE = 0.997001;
-//    private double RATE = 0.998001;
+    //    private double RATE = 0.998001;
+    private double income;
 
     public TradeInfoStrategy(int buyAmount, int sellAmount) {
         this.mBuyAmount = buyAmount;
@@ -52,11 +54,26 @@ public class TradeInfoStrategy implements Strategy {
             //先检查下当前的买单价格是否太低了
             List<DepthInfo.Data> bidsClone = new ArrayList<>(bids);
             Collections.sort(bidsClone, new SortComparator());
+
+            List<DepthInfo.Data> asksClone = new ArrayList<>(asks);
+            Collections.sort(asksClone, new SortComparator());
+
             //找到第一个过50w的买单
-            for (int i = 0; i < bidsClone.size(); i++) {
+            for (int i = 1; i < bidsClone.size(); i++) {
                 if (bidsClone.get(i).amount > mBuyAmount) {
                     double currentBidPrice = Double.parseDouble(df.format(bidsClone.get(i).price + 0.00001));
                     if (currentBidPrice != bidPrice) {
+
+                        double totalAskAmount = 0;
+                        for (int j = 0; j < asksClone.size(); j++) {
+                            if (asksClone.get(j).price <= currentBidPrice / RATE) {
+                                System.out.println("前方阻力1=" + asksClone.get(j).price + "   数量=" + asksClone.get(j).amount);
+                                totalAskAmount += asksClone.get(j).amount;
+                            }
+                        }
+                        if (bidsClone.get(i).amount <= totalAskAmount) {
+                            return false;
+                        }
 
                         if (dealHandle != null) {
                             int state = dealHandle.onDealBuyQuery(coinInfo, id);
@@ -65,7 +82,7 @@ public class TradeInfoStrategy implements Strategy {
                                 bidPrice = currentBidPrice;
                                 dealHandle.onDealBuyCancel(coinInfo, id, "", "");
                                 dealHandle.onDealBuy(coinInfo, ++id, "", String.valueOf(bidPrice));
-                                System.out.println("最新的买单价=" + bidPrice);
+                                System.out.println("最新的买单价=" + bidPrice + "  数量=" + bidsClone.get(i).amount);
                             }
                         }
                     }
@@ -79,14 +96,15 @@ public class TradeInfoStrategy implements Strategy {
             double lastPrice = bids.get(bids.size() - 1).price;
             int index = 0;
             double amount = 0;
-            if (bidPrice * 0.98 > kLine.datas.get(kLine.datas.size() - 1).close) {
-                System.out.println("已经损失2%,挂单=" + (bidPrice / RATE));
+            if (bidPrice * 0.99 > kLine.datas.get(kLine.datas.size() - 1).close) {
+                isBuy = false;
+                System.out.println("已经损失1%,挂单=" + (bidPrice / RATE));
                 if (dealHandle != null) {
                     int state = dealHandle.onDealSellQuery(coinInfo, id);
                     if (state == DealHandle.STATE_WAIT) {
                         dealHandle.onDealSell(coinInfo, id, "", String.valueOf(mSellPrice));
                     }
-                    isBuy = false;
+
                 }
                 return false;
             }
@@ -126,6 +144,7 @@ public class TradeInfoStrategy implements Strategy {
             for (int i = 0; i < asks.size(); i++) {
                 askTotalAmount += asks.get(i).amount;
                 if (asks.get(i).amount >= mSellAmount || askTotalAmount >= bidTotalAmount * 0.8) {
+                    System.out.println("交易卖价=" + asks.get(i).price + "   最低卖价=" + (bidPrice / RATE));
                     sellPrice = Double.parseDouble(df.format(Math.max(asks.get(i).price - 0.00001, bidPrice / RATE)));
                     System.out.println("卖单数量=" + asks.get(i).amount + "  卖单价=" + asks.get(i).price + "  买单价=" + bidPrice + "  rate=" + RATE + "   成本价=" + (bidPrice / RATE));
                     break;
@@ -133,6 +152,11 @@ public class TradeInfoStrategy implements Strategy {
             }
             if (mSellPrice == 0) {
                 mSellPrice = sellPrice;
+                for(int i=0;i<bids.size();i++) {
+                    if (bids.get(i).price == bidPrice) {
+                        System.out.println("买单价=" + bidPrice + "   数量=" + bids.get(i).amount);
+                    }
+                }
                 if (dealHandle != null) {
                     int state = dealHandle.onDealBuyQuery(coinInfo, id);
                     if (state == DealHandle.STATE_DONE) {
@@ -147,6 +171,7 @@ public class TradeInfoStrategy implements Strategy {
             } else
                 //两次卖单的价格不一致
                 if (mSellPrice != sellPrice) {
+                    double oldSellPrice = mSellPrice;
                     mSellPrice = sellPrice;
                     //查询订单是否成交了,如果没成交，就应该取消之前的然后换成挂新卖单
                     System.out.println("新的卖单价=" + mSellPrice);
@@ -156,6 +181,12 @@ public class TradeInfoStrategy implements Strategy {
                             dealHandle.onDealSell(coinInfo, id, "", String.valueOf(mSellPrice));
                         } else if (state == DealHandle.STATE_DONE) {
                             isBuy = false;
+                            double cost = bidPrice / 0.998001;
+                            income += (oldSellPrice - cost);
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                            String now = sdf.format(System.currentTimeMillis());
+                            System.err.println(now + "本次收益： 买单价=" + bidPrice + "  成本价=" + cost + " 卖单价=" + oldSellPrice + "   收益=" + df.format((oldSellPrice - cost)));
+                            System.err.println(now + "最新收益：" + df.format(income));
                         }
                     }
                 }

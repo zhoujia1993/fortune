@@ -18,7 +18,7 @@ public interface Strategy {
      * @param dealHandle 买卖方法回调
      * @return true表示，不再处理后面的策略
      */
-    boolean onHandle(CoinInfo coinInfo, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo, DealHandle dealHandle);
+    boolean  onHandle(CoinInfo coinInfo, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo, DealHandle dealHandle);
 
     /**
      * 测试环境，可以基于历史数据模拟

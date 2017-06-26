@@ -23,7 +23,7 @@ public class SmartGDFTrade implements DealHandle {
     @Override
     public void onDealBuy(CoinInfo coinInfo, int id, String amount, String price) {
         if (!buyOrders.containsKey(id)) {
-            amount = String.valueOf(10);
+            amount = String.valueOf(500);
             buyOrders.put(id, YunBi.getInstance().createOrder(market, amount, price, true));
             System.out.println("购买了" + amount + "数量，价格=" + price);
         }
