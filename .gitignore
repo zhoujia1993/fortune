@@ -3,3 +3,4 @@
 yunbi.iml
 out/
 *.iml
+client/src/yunbi/Config.java
