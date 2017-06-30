@@ -1,6 +1,7 @@
 package strategy;
 
 import soso.CoinInfo;
+import soso.StrategyUtils;
 import soso.Utils;
 import soso.model.DepthInfo;
 import soso.model.KLine;
@@ -20,6 +21,7 @@ import java.util.List;
  */
 public class TradeInfoStrategy implements Strategy {
     private final DecimalFormat df;
+    private final SimpleDateFormat sdf;
     private int mBuyAmount = 500000;
     private int mSellAmount = 500000;
     /**
@@ -37,16 +39,17 @@ public class TradeInfoStrategy implements Strategy {
         this.mBuyAmount = buyAmount;
         this.mSellAmount = sellAmount;
         df = new DecimalFormat(".00000");
+        sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     }
 
     @Override
-    public boolean onHandle(CoinInfo coinInfo, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo, DealHandle dealHandle) {
-        if (kLine == null || depthInfo == null) {
+    public boolean onHandle(CoinInfo coinInfo,int type, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo, DealHandle dealHandle) {
+        if (kLine == null || kLine.datas == null || depthInfo == null) {
             return false;
         }
         List<DepthInfo.Data> asks = depthInfo.ask;
         List<DepthInfo.Data> bids = depthInfo.bid;
-        if (Utils.isEmpty(asks) || Utils.isEmpty(bids)) {
+        if (Utils.isEmpty(asks) || Utils.isEmpty(bids) || asks.size() < 9 || bids.size() < 9) {
             return false;
         }
 
@@ -58,9 +61,12 @@ public class TradeInfoStrategy implements Strategy {
             List<DepthInfo.Data> asksClone = new ArrayList<>(asks);
             Collections.sort(asksClone, new SortComparator());
 
+
             //找到第一个过50w的买单
+            boolean isFound = false;
             for (int i = 1; i < bidsClone.size(); i++) {
                 if (bidsClone.get(i).amount > mBuyAmount) {
+                    isFound = true;
                     double currentBidPrice = Double.parseDouble(df.format(bidsClone.get(i).price + 0.00001));
                     if (currentBidPrice != bidPrice) {
 
@@ -72,7 +78,47 @@ public class TradeInfoStrategy implements Strategy {
                             }
                         }
                         if (bidsClone.get(i).amount <= totalAskAmount) {
+                            if (dealHandle != null) {
+                                int state = dealHandle.onDealBuyQuery(coinInfo, id);
+                                if (state == DealHandle.STATE_WAIT) {
+                                    if (dealHandle.onDealBuyCancel(coinInfo, id, "", "", String.valueOf(kLine.datas.get(kLine.datas.size() - 1).close))) {
+                                        isBuy = false;
+                                    }
+                                    System.out.println("前方阻力太大，取消买单");
+                                }
+                            }
                             return false;
+                        }
+
+                        //如果当前在金叉向下的话就不买了，风险太大了
+                        List<KLine.Data> datas = kLine.getKLine().datas;
+                        if (datas != null) {
+                            double[] ema12 = StrategyUtils.getCloseEMA(kLine, 2, 7);
+                            double[] ema26 = StrategyUtils.getCloseEMA(kLine, 2, 30);
+                            if (ema12.length > 2 && ema26.length > 2) {
+                                boolean cancel = false;
+                                if (ema12[ema12.length - 1] > ema26[ema26.length - 1] && ema12[ema12.length - 1] < ema12[ema12.length - 2]) {
+                                    System.out.println("当前处于金叉向下1，不买" + datas.get(datas.size() - 1).date);
+                                    cancel = true;
+                                } else if (ema12[ema12.length - 1] < ema26[ema26.length - 1] &&
+                                        (ema12[ema12.length - 2] >= ema26[ema26.length - 2] ||
+                                                ema12[ema12.length - 3] >= ema26[ema26.length - 3])) {
+                                    System.out.println("前两分钟还是金叉，不买");
+                                    cancel = true;
+                                }
+                                if (cancel) {
+                                    if (dealHandle != null) {
+                                        int state = dealHandle.onDealBuyQuery(coinInfo, id);
+                                        if (state == DealHandle.STATE_WAIT) {
+                                            if (dealHandle.onDealBuyCancel(coinInfo, id, "", "", String.valueOf(kLine.datas.get(kLine.datas.size() - 1).close))) {
+                                                isBuy = false;
+                                            }
+                                            System.out.println("最新的买单价处于金叉向下，所以取消买单挂单");
+                                        }
+                                    }
+                                    return false;
+                                }
+                            }
                         }
 
                         if (dealHandle != null) {
@@ -80,16 +126,28 @@ public class TradeInfoStrategy implements Strategy {
                             if (state == DealHandle.STATE_WAIT) {
                                 //重新设置挂单价
                                 bidPrice = currentBidPrice;
-                                dealHandle.onDealBuyCancel(coinInfo, id, "", "");
-                                dealHandle.onDealBuy(coinInfo, ++id, "", String.valueOf(bidPrice));
-                                System.out.println("最新的买单价=" + bidPrice + "  数量=" + bidsClone.get(i).amount);
+                                if (dealHandle.onDealBuyCancel(coinInfo, id, "", "", String.valueOf(kLine.datas.get(kLine.datas.size() - 1).close))) {
+                                    dealHandle.onDealBuy(coinInfo, ++id, "", String.valueOf(bidPrice), String.valueOf(kLine.datas.get(kLine.datas.size() - 1).close));
+                                    System.out.println("最新的买单价=" + bidPrice + "  数量=" + bidsClone.get(i).amount);
+                                }
+
                             }
                         }
                     }
                     break;
                 }
             }
-
+            if (isFound) {
+                if (dealHandle != null) {
+                    int state = dealHandle.onDealBuyQuery(coinInfo, id);
+                    if (state == DealHandle.STATE_WAIT) {
+                        if (dealHandle.onDealBuyCancel(coinInfo, id, "", "", String.valueOf(kLine.datas.get(kLine.datas.size() - 1).close))) {
+                            isBuy = false;
+                        }
+                        System.out.println("没有找到大于50W的单子，取消买单");
+                    }
+                }
+            }
 
             //查找买单价格现在的数量
             double firstPrice = bids.get(0).price;
@@ -102,7 +160,7 @@ public class TradeInfoStrategy implements Strategy {
                 if (dealHandle != null) {
                     int state = dealHandle.onDealSellQuery(coinInfo, id);
                     if (state == DealHandle.STATE_WAIT) {
-                        dealHandle.onDealSell(coinInfo, id, "", String.valueOf(mSellPrice));
+                        dealHandle.onDealSell(coinInfo, id, "", String.valueOf(mSellPrice), String.valueOf(kLine.datas.get(kLine.datas.size() - 1).close));
                     }
 
                 }
@@ -114,11 +172,11 @@ public class TradeInfoStrategy implements Strategy {
                 amount = bids.get(0).amount;
                 index = 0;
             } else if (lastPrice > bidPrice) {
-                System.out.println("买单价已经低于买最低价了");
-                amount = bids.get(bids.size() - 1).amount;
-                index = bids.size() - 1;
+                System.out.println("买单价已经低于买8价了");
+                amount = bids.get(7).amount;
+                index = 6;
             } else {
-                for (int i = 0; i < bids.size() - 1; i++) {
+                for (int i = 0; i < 7; i++) {
                     index = i;
                     if (bids.get(i).price == bidPrice) {
                         amount = bids.get(i).amount;
@@ -136,8 +194,10 @@ public class TradeInfoStrategy implements Strategy {
             }
             //计算买单价之上的所有数量
             int bidTotalAmount = 0;
-            for (int i = 0; i <= Math.min(bids.size() - 1, index); i++) {
-                bidTotalAmount += bids.get(i).amount;
+            if (index > 0) {
+                for (int i = 0; i <= Math.min(7, index); i++) {
+                    bidTotalAmount += bids.get(i).amount;
+                }
             }
             int askTotalAmount = 0;
             double sellPrice = 0;
@@ -150,9 +210,10 @@ public class TradeInfoStrategy implements Strategy {
                     break;
                 }
             }
+            sellPrice = Math.max(sellPrice, bidPrice / RATE);
             if (mSellPrice == 0) {
                 mSellPrice = sellPrice;
-                for(int i=0;i<bids.size();i++) {
+                for (int i = 0; i < bids.size(); i++) {
                     if (bids.get(i).price == bidPrice) {
                         System.out.println("买单价=" + bidPrice + "   数量=" + bids.get(i).amount);
                     }
@@ -160,7 +221,7 @@ public class TradeInfoStrategy implements Strategy {
                 if (dealHandle != null) {
                     int state = dealHandle.onDealBuyQuery(coinInfo, id);
                     if (state == DealHandle.STATE_DONE) {
-                        dealHandle.onDealSell(coinInfo, id, "", String.valueOf(mSellPrice));
+                        dealHandle.onDealSell(coinInfo, id, "", String.valueOf(mSellPrice), String.valueOf(kLine.datas.get(kLine.datas.size() - 1).close));
                         System.out.println("卖单价=" + mSellPrice);
                     } else {
                         mSellPrice = 0;
@@ -178,12 +239,12 @@ public class TradeInfoStrategy implements Strategy {
                     if (dealHandle != null) {
                         int state = dealHandle.onDealSellQuery(coinInfo, id);
                         if (state == DealHandle.STATE_WAIT) {
-                            dealHandle.onDealSell(coinInfo, id, "", String.valueOf(mSellPrice));
+                            dealHandle.onDealSell(coinInfo, id, "", String.valueOf(mSellPrice), String.valueOf(kLine.datas.get(kLine.datas.size() - 1).close));
                         } else if (state == DealHandle.STATE_DONE) {
                             isBuy = false;
                             double cost = bidPrice / 0.998001;
                             income += (oldSellPrice - cost);
-                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                             String now = sdf.format(System.currentTimeMillis());
                             System.err.println(now + "本次收益： 买单价=" + bidPrice + "  成本价=" + cost + " 卖单价=" + oldSellPrice + "   收益=" + df.format((oldSellPrice - cost)));
                             System.err.println(now + "最新收益：" + df.format(income));
@@ -191,10 +252,24 @@ public class TradeInfoStrategy implements Strategy {
                     }
                 }
         } else {
-            //如果当前在金叉台上面的话就不买了，风险太大了
-//            List<KLine.Data> datas = kLine.getKLine().datas;
-//            double[] ema12 = StrategyUtils.getCloseEMA(kLine, 2, 7);
-//            double[] ema26 = StrategyUtils.getCloseEMA(kLine, 2, 30);
+            //如果当前在金叉向下的话就不买了，风险太大了
+            List<KLine.Data> datas = kLine.getKLine().datas;
+            if (datas != null) {
+                double[] ema12 = StrategyUtils.getCloseEMA(kLine, 2, 7);
+                double[] ema26 = StrategyUtils.getCloseEMA(kLine, 2, 30);
+                if (ema12.length > 2 && ema26.length > 2) {
+                    if (ema12[ema12.length - 1] > ema26[ema26.length - 1] && ema12[ema12.length - 1] < ema12[ema12.length - 2]) {
+                        System.out.println("当前处于金叉向下，不买" + sdf.format(datas.get(datas.size() - 1).date * 1000));
+                        return false;
+                    } else if (ema12[ema12.length - 1] < ema26[ema26.length - 1] &&
+                            (ema12[ema12.length - 2] >= ema26[ema26.length - 2] ||
+                                    ema12[ema12.length - 3] >= ema26[ema26.length - 3])) {
+                        System.out.println("前两分钟还是金叉，不买");
+                        return false;
+                    }
+
+                }
+            }
             Collections.sort(asks, new SortComparator());
             Collections.sort(bids, new SortComparator());
             //找到第一个过50w的买单
@@ -214,16 +289,18 @@ public class TradeInfoStrategy implements Strategy {
                     }
                     bidPrice = buyPrice;
                     id++;
-                    isBuy = true;
                     mSellPrice = 0;
                     if (dealHandle != null) {
-                        dealHandle.onDealBuy(coinInfo, id, "", String.valueOf(bidPrice));
+                        if (dealHandle.onDealBuy(coinInfo, id, "", String.valueOf(bidPrice), String.valueOf(kLine.datas.get(kLine.datas.size() - 1).close))) {
+                            isBuy = true;
+                        }
 //                        dealHandle.onDealBuy(coinInfo, id, "", String.valueOf(kLine.datas.get(kLine.datas.size() - 1).close));
                     }
                     System.out.println("买单价=" + bidPrice);
                     break;
                 }
             }
+
         }
 //        System.out.print(bids.get(bids.size() - 1));
 //        System.out.println(depthInfo.toString());
@@ -231,7 +308,9 @@ public class TradeInfoStrategy implements Strategy {
     }
 
     @Override
-    public boolean onTestHandle(CoinInfo coinInfo, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo) {
+    public boolean onTestHandle(CoinInfo coinInfo, int type,KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo) {
+        System.out.println(sdf.format(kLine.datas.get(kLine.datas.size() - 1).date * 1000) + type);
+
         return false;
     }
 
