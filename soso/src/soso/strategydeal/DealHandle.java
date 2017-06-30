@@ -31,7 +31,7 @@ public interface DealHandle {
      * @param amount
      * @param price
      */
-    void  onDealBuy(CoinInfo coinInfo, int id, String amount, String price);
+    boolean  onDealBuy(CoinInfo coinInfo, int id, String amount, String price,String currentPrice);
 
     /**
      * 卖单回调
@@ -40,7 +40,7 @@ public interface DealHandle {
      * @param amount
      * @param price
      */
-    void onDealSell(CoinInfo coinInfo, int id, String amount, String price);
+    boolean onDealSell(CoinInfo coinInfo, int id, String amount, String price,String currentPrice);
 
     /**
      * 取消买单
@@ -49,8 +49,8 @@ public interface DealHandle {
      * @param amount
      * @param price
      */
-    void onDealBuyCancel(CoinInfo coinInfo, int id, String amount, String price);
-    void onDealSellCancel(CoinInfo coinInfo, int id, String amount, String price);
+    boolean onDealBuyCancel(CoinInfo coinInfo, int id, String amount, String price,String currentPrice);
+    boolean onDealSellCancel(CoinInfo coinInfo, int id, String amount, String price,String currentPrice);
 
     /**
      * 查询买单，并返回订单状态

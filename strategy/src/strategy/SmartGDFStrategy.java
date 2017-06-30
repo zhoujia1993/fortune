@@ -37,7 +37,7 @@ public class SmartGDFStrategy implements Strategy {
     }
 
     @Override
-    public boolean onHandle(CoinInfo coinInfo, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo, DealHandle dealHandle) {
+    public boolean onHandle(CoinInfo coinInfo,int type, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo, DealHandle dealHandle) {
         if (kLine == null) {
             return false;
         }
@@ -61,7 +61,7 @@ public class SmartGDFStrategy implements Strategy {
             System.out.println("购买价格=" + money);
             if (dealHandle != null && !buy) {
                 buy = true;
-                dealHandle.onDealBuy(coinInfo, id, "0", df.format(money));
+                dealHandle.onDealBuy(coinInfo, id, "0", df.format(money), String.valueOf(kLine.datas.get(kLine.datas.size() - 1).close));
 
             }
         } else if (e12before > e26before && e12 < e26 && buy) {
@@ -77,9 +77,9 @@ public class SmartGDFStrategy implements Strategy {
                 int state = dealHandle.onDealSellQuery(coinInfo, id);
                 if (state == DealHandle.STATE_WAIT) {
 //                    dealHandle.onDealSellCancel(coinInfo, id, String.valueOf(0), "");
-                    dealHandle.onDealSell(coinInfo, id, "0", df.format(price));
+                    dealHandle.onDealSell(coinInfo, id, "0", df.format(price),String.valueOf(kLine.datas.get(kLine.datas.size() - 1).close));
                 } else if (state == dealHandle.STATE_UNKNOWN) {
-                    dealHandle.onDealSell(coinInfo, id, "0", df.format(price));
+                    dealHandle.onDealSell(coinInfo, id, "0", df.format(price),String.valueOf(kLine.datas.get(kLine.datas.size() - 1).close));
                 }
             }
             id++;
@@ -99,7 +99,7 @@ public class SmartGDFStrategy implements Strategy {
                     System.out.println(name + "智能卖出 成本价=" + sell + "   收盘价=" + price + "  净赚=" + df.format(price - sell));
                     payback += Double.valueOf(df.format(price - sell));
                     if (dealHandle != null) {
-                        dealHandle.onDealSell(coinInfo, id, "0", df.format(price));
+                        dealHandle.onDealSell(coinInfo, id, "0", df.format(price),String.valueOf(kLine.datas.get(kLine.datas.size() - 1).close));
                         sellFlag = true;
                     }
                 }
@@ -113,7 +113,7 @@ public class SmartGDFStrategy implements Strategy {
     }
 
     @Override
-    public boolean onTestHandle(CoinInfo coinInfo, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo) {
+    public boolean onTestHandle(CoinInfo coinInfo, int type,KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo) {
         DecimalFormat df = new DecimalFormat(".000000");
         List<KLine.Data> kLineData = kLine.datas;
         double[] ema12 = StrategyUtils.getCloseEMA(kLine, 2, 7);

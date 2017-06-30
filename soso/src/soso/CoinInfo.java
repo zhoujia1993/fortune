@@ -1,33 +1,42 @@
 package soso;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by zhoujia on 2017/6/17.
  */
 public class CoinInfo {
 
 
-    private CoinKLine coinKLine;
+    private List<CoinKLine> coinKLines;
+
     private CoinDepthTrades coinDepthTrades;
 
-    public CoinInfo(String lan, String market, String coin, String symbol, int size, int type) {
+    public CoinInfo(String lan, String market, String coin, String symbol, int size, int[] type) {
         this.coinDepthTrades = new CoinDepthTrades(lan, market, coin, size);
-        this.coinKLine = new CoinKLine(lan, symbol, type, 0);
+        this.coinKLines = new ArrayList<>();
+        for (int i : type) {
+            this.coinKLines.add(new CoinKLine(lan, symbol, i, 0));
+        }
+
     }
 
     /**
      * 这几个值需要抓sosobtc的接口，在不同的币的详情页的两个接口理由，很好抓
+     *
      * @param lan
      * @param market
      * @param coin
      * @param symbol
      * @param type
      */
-    public CoinInfo(String lan, String market, String coin, String symbol, int type) {
+    public CoinInfo(String lan, String market, String coin, String symbol, int[] type) {
         this(lan, market, coin, symbol, 50, type);
     }
 
-    public CoinKLine getCoinKLine() {
-        return coinKLine;
+    public List<CoinKLine> getCoinKLine() {
+        return coinKLines;
     }
 
     public CoinDepthTrades getCoinDepthTrades() {

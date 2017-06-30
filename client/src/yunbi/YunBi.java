@@ -15,7 +15,7 @@ import java.util.List;
 public class YunBi {
 
     private List<Markets> markets;
-    private static final int MAX = 5;
+    private static final int MAX = 10;
 
     private YunBi() {
 
@@ -39,12 +39,13 @@ public class YunBi {
         markets = new YunBiNetService<List<Markets>>().request(Method.GET, "/api/v2/markets.json", null, false, Markets.class);
     }
 
-    public static void syncAccountInfo() {
+    public  AccountInfo syncAccountInfo() {
         NameValuePair params = new NameValuePair();
         params.put("access_key", Config.ACCESS_KEY);
         params.put("tonce", String.valueOf(System.currentTimeMillis()));
         AccountInfo accountInfo = new YunBiNetService<AccountInfo>().request(Method.GET, "/api/v2/members/me.json", params, true, AccountInfo.class);
-        AccountCenter.getInstance().setAccount(accountInfo);
+//        AccountCenter.getInstance().setAccount(accountInfo);
+        return accountInfo;
     }
 
     public void getSpecificDeposit() {
@@ -68,6 +69,14 @@ public class YunBi {
             order = new YunBiNetService<Order>().request(Method.POST, "/api/v2/orders.json", params, true, Order.class);
             System.out.println("创建单子:" + (order != null ? order.toString() : ""));
             count++;
+            if (order == null) {
+                try {
+                    Thread.sleep(400);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+            }
         } while (order == null && count <= MAX);
         return order;
 //        return null;
@@ -83,6 +92,14 @@ public class YunBi {
             order = new YunBiNetService<Order>().request(Method.GET, "/api/v2/order.json", params, true, Order.class);
             System.out.println("查询单子:" + (order != null ? order.toString() : ""));
             count++;
+            if (order == null) {
+                try {
+                    Thread.sleep(400);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+            }
         } while (order == null && count <= MAX);
         return order;
     }
@@ -97,6 +114,14 @@ public class YunBi {
             order = new YunBiNetService<Order>().request(Method.POST, "/api/v2/order/delete.json", params, true, Order.class);
             System.out.println("取消单子:" + (order != null ? order.toString() : ""));
             count++;
+            if (order == null) {
+                try {
+                    Thread.sleep(400);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+            }
         } while (order == null && count <= MAX);
         return order;
     }

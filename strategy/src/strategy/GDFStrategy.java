@@ -12,7 +12,8 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
-/**金叉买，死叉卖的策略，基本无用，参开参考吧
+/**
+ * 金叉买，死叉卖的策略，基本无用，参开参考吧
  * Created by zhoujia on 2017/6/17.
  */
 
@@ -31,7 +32,7 @@ public class GDFStrategy implements Strategy {
     }
 
     @Override
-    public boolean onTestHandle(CoinInfo coinInfo, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo) {
+    public boolean onTestHandle(CoinInfo coinInfo, int type, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo) {
 //            System.out.println(kLine.toString());
 //            System.out.println(tradesInfo.toString());
 //            System.out.println(depthInfo.toString());
@@ -71,7 +72,7 @@ public class GDFStrategy implements Strategy {
     }
 
     @Override
-    public boolean onHandle(CoinInfo coinInfo, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo, DealHandle dealHandle) {
+    public boolean onHandle(CoinInfo coinInfo, int type, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo, DealHandle dealHandle) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         List<KLine.Data> kLineData = kLine.datas;
         double[] ema7 = StrategyUtils.getCloseEMA(kLine, 2, 7);
