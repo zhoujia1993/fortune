@@ -29,5 +29,26 @@ public class AccountInfo implements ConvertData<AccountInfo> {
         public String currency;
         public String balance;
         public String locked;
+
+        @Override
+        public String toString() {
+            return "Account{" +
+                    "currency='" + currency + '\'' +
+                    ", balance='" + balance + '\'' +
+                    ", locked='" + locked + '\'' +
+                    '}';
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "AccountInfo{" +
+                "sn='" + sn + '\'' +
+                ", name='" + name + '\'' +
+                ", email='" + email + '\'' +
+                ", activated='" + activated + '\'' +
+                ", memo='" + memo + '\'' +
+                ", accounts=" + accounts +
+                '}';
     }
 }

@@ -9,8 +9,7 @@ import soso.Utils;
 import java.io.*;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.*;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -27,9 +26,10 @@ public class NetService<T> {
 
         try {
             URL url1 = new URL(url);
+            Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(InetAddress.getByName("172.18.37.124"), 8888));
             HttpURLConnection connection = (HttpURLConnection) url1.openConnection();
             connection.setConnectTimeout(10000);
-            connection.setReadTimeout(60000);
+            connection.setReadTimeout(10000);
             connection.setRequestMethod(method.getMethod());
             connection.setDoInput(true);
             if (method == Method.POST && pair != null) {
@@ -73,6 +73,19 @@ public class NetService<T> {
                 }
             } else {
                 System.out.println("请求返回码=" + connection.getResponseCode());
+                InputStream is = connection.getErrorStream();
+                if (is != null) {
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                    byte[] bytes = new byte[1024];
+                    int len = 0;
+                    while ((len = is.read(bytes)) != -1) {
+                        bos.write(bytes, 0, len);
+                    }
+                    bos.flush();
+                    bos.close();
+                    is.close();
+                    System.out.println("错误信息=" + new String(bos.toByteArray()));
+                }
                 return null;
             }
         } catch (Exception e) {
