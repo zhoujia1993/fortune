@@ -40,11 +40,24 @@ public class YunBi {
     }
 
     public  AccountInfo syncAccountInfo() {
-        NameValuePair params = new NameValuePair();
-        params.put("access_key", Config.ACCESS_KEY);
-        params.put("tonce", String.valueOf(System.currentTimeMillis()));
-        AccountInfo accountInfo = new YunBiNetService<AccountInfo>().request(Method.GET, "/api/v2/members/me.json", params, true, AccountInfo.class);
+        int count = 0;
+        AccountInfo accountInfo=null;
+        do {
+            NameValuePair params = new NameValuePair();
+            params.put("access_key", Config.ACCESS_KEY);
+            params.put("tonce", String.valueOf(System.currentTimeMillis()));
+            accountInfo = new YunBiNetService<AccountInfo>().request(Method.GET, "/api/v2/members/me.json", params, true, AccountInfo.class);
 //        AccountCenter.getInstance().setAccount(accountInfo);
+            count++;
+            if (accountInfo == null) {
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        } while (accountInfo == null && count <= MAX);
         return accountInfo;
     }
 
@@ -71,7 +84,7 @@ public class YunBi {
             count++;
             if (order == null) {
                 try {
-                    Thread.sleep(400);
+                    Thread.sleep(200);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -94,7 +107,7 @@ public class YunBi {
             count++;
             if (order == null) {
                 try {
-                    Thread.sleep(400);
+                    Thread.sleep(200);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -116,7 +129,7 @@ public class YunBi {
             count++;
             if (order == null) {
                 try {
-                    Thread.sleep(400);
+                    Thread.sleep(200);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
