@@ -3,6 +3,7 @@ package trade;
 import soso.CoinInfo;
 import soso.Utils;
 import soso.strategydeal.DealHandle;
+import wechat.MessageSend;
 import yunbi.YunBi;
 import yunbi.model.AccountInfo;
 import yunbi.model.Order;
@@ -14,9 +15,11 @@ import java.util.Set;
 
 public class SmartGDFTrade implements DealHandle {
 
+    private String name;
     private String market;
     private Map<Integer, Order> buyOrders;
     private Map<Integer, Order> sellOrders;
+    private Map<Integer, Order> hangOrders;
     private Order emergencyOrder;
     /**
      * 一开始的初始钱数
@@ -27,12 +30,16 @@ public class SmartGDFTrade implements DealHandle {
      */
     private double nowBalance;
 
-    private static final int DIVIDER = 3;
+    private static int DIVIDER = 10;
 
-    public SmartGDFTrade(String market) {
+    private int state = 0;
+
+    public SmartGDFTrade(String market, String name) {
+        this.name = name;
         this.market = market;
         buyOrders = new HashMap<>();
         sellOrders = new HashMap<>();
+        hangOrders = new HashMap<>();
         balance = syncAccount();
 
     }
@@ -61,106 +68,94 @@ public class SmartGDFTrade implements DealHandle {
             if (money != 0 && money <= 10) {
                 return false;
             }
-            if (money > balance * (100 + DIVIDER) / 100) {
+            money = Math.min(209.806, money);
+            balance = money;
+            Set<Map.Entry<Integer, Order>> map = hangOrders.entrySet();
+            Iterator<Map.Entry<Integer, Order>> entry = map.iterator();
+            while (entry.hasNext()) {
+                Map.Entry<Integer, Order> entry1 = entry.next();
+                Order queryOrder = YunBi.getInstance().queryOrder(String.valueOf(entry1.getValue().id));
+                if (queryOrder != null && queryOrder.isDone()) {
+                    entry.remove();
+                    state--;
+                }
+
+            }
+            if (state == 3) {
+                return false;
+            }
+            int each = 3;
+            if (state == 1) {
+                each = 2;
+            } else if (state == 2) {
+                each = 3;
+            } else {
+                each = 5;
+            }
+
+            if (money > 209.806 * (100 + 10) / 100) {
                 System.out.println("账户当前余额>程序初始化账户余额10%,更新程序初始账户余额为当前余额");
-                balance = money;
+//                balance = money;
             }
             if (money != 0 && balance != 0 && money <= balance / DIVIDER) {
-                if (emergencyOrder != null) {
-                    Order queryOrder = YunBi.getInstance().queryOrder(String.valueOf(emergencyOrder.id));
-                    if (queryOrder != null && queryOrder.isDone()) {
-                        emergencyOrder = null;
-                    }
-                } else {
-                    double maxPrice = Double.MIN_VALUE;
-                    long maxId = -1;
-                    Set<Map.Entry<Integer, Order>> sets = sellOrders.entrySet();
-                    Iterator<Map.Entry<Integer, Order>> it = sets.iterator();
-                    while (it.hasNext()) {
-                        Map.Entry<Integer, Order> sellMap = it.next();
-                        Order sellOrder = sellMap.getValue();
-                        if (sellOrder == null) {
-                            continue;
-                        }
-                        Order queryOrder = YunBi.getInstance().queryOrder(String.valueOf(sellOrder.id));
-                        if (queryOrder == null) {
-
-                            continue;
-                        }
-                        if (queryOrder.isCancelled() || queryOrder.isDone()) {
-                            it.remove();
-                        }
-
-                        if (Double.parseDouble(queryOrder.price) > maxPrice) {
-                            maxPrice = Double.parseDouble(queryOrder.price);
-                            maxId = queryOrder.id;
-                        }
-                    }
-
-                    if (maxId != -1) {
-                        System.out.println("找到的价格最高的卖单=" + maxId + " 价格为=" + maxPrice);
-                        Order queryOrder = YunBi.getInstance().queryOrder(String.valueOf(maxId));
-                        if (queryOrder != null) {
-                            if (queryOrder.isWait()) {
-                                queryOrder = YunBi.getInstance().cancelOrder(String.valueOf(queryOrder.id));
-                                if (queryOrder != null && queryOrder.isWait()) {
-                                    Order sellOrder = YunBi.getInstance().createOrder(market, String.valueOf(Double.valueOf(queryOrder.volume)), price, false);
-                                    if (sellOrder != null) {
-                                        emergencyOrder = sellOrder;
-                                        return false;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+//                if (emergencyOrder != null) {
+//                    Order queryOrder = YunBi.getInstance().queryOrder(String.valueOf(emergencyOrder.id));
+//                    if (queryOrder != null && queryOrder.isDone()) {
+//                        emergencyOrder = null;
+//                    }
+//                } else {
+//                    double maxPrice = Double.MIN_VALUE;
+//                    long maxId = -1;
+//                    Set<Map.Entry<Integer, Order>> sets = sellOrders.entrySet();
+//                    Iterator<Map.Entry<Integer, Order>> it = sets.iterator();
+//                    while (it.hasNext()) {
+//                        Map.Entry<Integer, Order> sellMap = it.next();
+//                        Order sellOrder = sellMap.getValue();
+//                        if (sellOrder == null) {
+//                            continue;
+//                        }
+//                        Order queryOrder = YunBi.getInstance().queryOrder(String.valueOf(sellOrder.id));
+//                        if (queryOrder == null) {
+//
+//                            continue;
+//                        }
+//                        if (queryOrder.isCancelled() || queryOrder.isDone()) {
+//                            it.remove();
+//                        }
+//
+//                        if (Double.parseDouble(queryOrder.price) > maxPrice) {
+//                            maxPrice = Double.parseDouble(queryOrder.price);
+//                            maxId = queryOrder.id;
+//                        }
+//                    }
+//
+//                    if (maxId != -1) {
+//                        System.out.println("找到的价格最高的卖单=" + maxId + " 价格为=" + maxPrice);
+//                        Order queryOrder = YunBi.getInstance().queryOrder(String.valueOf(maxId));
+//                        if (queryOrder != null) {
+//                            if (queryOrder.isWait()) {
+//                                queryOrder = YunBi.getInstance().cancelOrder(String.valueOf(queryOrder.id));
+//                                if (queryOrder != null && queryOrder.isWait()) {
+//                                    Order sellOrder = YunBi.getInstance().createOrder(market, String.valueOf(Double.valueOf(queryOrder.volume)), price, false);
+//                                    if (sellOrder != null) {
+//                                        emergencyOrder = sellOrder;
+//                                        return false;
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
                 return false;
             }
 
-            amount = String.valueOf(balance / Double.parseDouble(price) / DIVIDER);
+            amount = String.valueOf(balance * each / Double.parseDouble(price) / DIVIDER);
             Order order = YunBi.getInstance().createOrder(market, amount, price, true);
             if (order == null) {
                 return false;
             }
             buyOrders.put(id, order);
             System.out.println("购买了" + amount + "数量，价格=" + price);
-//            double money = syncAccount();
-//            if (money <= balance / 10) {
-//                double maxPrice = Double.MIN_VALUE;
-//                int maxId = -1;
-//                for (Map.Entry<Integer, Order> sellMap : sellOrders.entrySet()) {
-//                    int sellId = sellMap.getKey();
-//                    Order sellOrder = sellMap.getValue();
-//                    if (sellOrder == null) {
-//                        continue;
-//                    }
-//                    Order queryOrder = YunBi.getInstance().queryOrder(String.valueOf(sellOrder.id));
-//                    if (queryOrder == null || queryOrder.isCancelled() || queryOrder.isDone()) {
-//                        continue;
-//                    }
-//
-//                    if (Double.parseDouble(queryOrder.price) > maxPrice) {
-//                        maxPrice = Double.parseDouble(queryOrder.price);
-//                        maxId = sellId;
-//                    }
-//                }
-//                if (maxId != -1) {
-//                    Order queryOrder = YunBi.getInstance().queryOrder(String.valueOf(maxId));
-//                    if (queryOrder != null) {
-//                        if (queryOrder.isWait()) {
-//                            queryOrder = YunBi.getInstance().cancelOrder(String.valueOf(queryOrder.id));
-//                            if (queryOrder != null && queryOrder.isWait()) {
-//                                Order sellOrder = YunBi.getInstance().createOrder(market, String.valueOf(Double.valueOf(queryOrder.volume)), price, false);
-//                                if (sellOrder != null) {
-//                                    emergencyOrder = sellOrder;
-//                                    return true;
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//
-//            }
             return true;
         }
         return false;
@@ -179,7 +174,7 @@ public class SmartGDFTrade implements DealHandle {
                     if (queryOrder.isWait()) {
                         queryOrder = YunBi.getInstance().cancelOrder(String.valueOf(queryOrder.id));
                         if (queryOrder != null && queryOrder.isWait()) {
-                            sellOrder = YunBi.getInstance().createOrder(market, String.valueOf(Double.valueOf(queryOrder.volume)), price, false);
+                            sellOrder = YunBi.getInstance().createOrder(market, String.valueOf(Double.valueOf(queryOrder.remainVolume)), price, false);
                             if (sellOrder != null) {
                                 sellOrders.put(id, sellOrder);
                                 return true;
@@ -267,6 +262,18 @@ public class SmartGDFTrade implements DealHandle {
 
         } else {
             return DealHandle.STATE_UNKNOWN;
+        }
+    }
+
+    @Override
+    public void onDealHang(int id) {
+        Order order = YunBi.getInstance().queryOrder(String.valueOf(sellOrders.get(id).id));
+        if (order != null) {
+            hangOrders.put(id, order);
+        }
+        state++;
+        if (state == 3) {
+            MessageSend.sendGuaMessage(name, "已经挂3单了，垃圾程序，赶紧去优化");
         }
     }
 

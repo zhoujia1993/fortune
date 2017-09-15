@@ -63,10 +63,13 @@ public interface DealHandle {
 
     /**
      * 查询卖单，并返回订单状态
+     *
      * @param coinInfo
      * @param id
      * @return
      */
     int onDealSellQuery(CoinInfo coinInfo, int id);
+
+    void onDealHang(int id);
 
 }

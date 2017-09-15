@@ -1,6 +1,7 @@
 package strategy;
 
 import soso.CoinInfo;
+import soso.Dimension;
 import soso.StrategyUtils;
 import soso.model.DepthInfo;
 import soso.model.KLine;
@@ -37,7 +38,7 @@ public class SmartGDFStrategy implements Strategy {
     }
 
     @Override
-    public boolean onHandle(CoinInfo coinInfo,int type, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo, DealHandle dealHandle) {
+    public boolean onHandle(CoinInfo coinInfo, Dimension type, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo, DealHandle dealHandle) {
         if (kLine == null) {
             return false;
         }
@@ -113,7 +114,7 @@ public class SmartGDFStrategy implements Strategy {
     }
 
     @Override
-    public boolean onTestHandle(CoinInfo coinInfo, int type,KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo) {
+    public boolean onTestHandle(CoinInfo coinInfo, Dimension type,KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo) {
         DecimalFormat df = new DecimalFormat(".000000");
         List<KLine.Data> kLineData = kLine.datas;
         double[] ema12 = StrategyUtils.getCloseEMA(kLine, 2, 7);

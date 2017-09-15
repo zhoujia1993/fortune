@@ -1,6 +1,7 @@
 package soso.strategydeal;
 
 import soso.CoinInfo;
+import soso.Dimension;
 import soso.model.DepthInfo;
 import soso.model.KLine;
 import soso.model.TradesInfo;
@@ -20,7 +21,7 @@ public interface Strategy {
      * @param dealHandle 买卖方法回调
      * @return true表示，不再处理后面的策略
      */
-    boolean  onHandle(CoinInfo coinInfo,int type, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo, DealHandle dealHandle);
+    boolean  onHandle(CoinInfo coinInfo, Dimension type, KLine kLine, TradesInfo tradesInfo, DepthInfo depthInfo, DealHandle dealHandle);
 
     /**
      * 测试环境，可以基于历史数据模拟
@@ -32,6 +33,6 @@ public interface Strategy {
      * @param depthInfo
      * @return
      */
-    boolean onTestHandle(CoinInfo coinInfo,int type, KLine kLine,TradesInfo tradesInfo, DepthInfo depthInfo);
+    boolean onTestHandle(CoinInfo coinInfo,Dimension type, KLine kLine,TradesInfo tradesInfo, DepthInfo depthInfo);
 
 }

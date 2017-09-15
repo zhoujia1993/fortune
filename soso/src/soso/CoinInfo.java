@@ -9,15 +9,17 @@ import java.util.List;
 public class CoinInfo {
 
 
+    public final Dimension[] type;
     private List<CoinKLine> coinKLines;
 
     private CoinDepthTrades coinDepthTrades;
 
-    public CoinInfo(String lan, String market, String coin, String symbol, int size, int[] type) {
+    public CoinInfo(String lan, String market, String coin, String symbol, int size, Dimension[] type) {
         this.coinDepthTrades = new CoinDepthTrades(lan, market, coin, size);
         this.coinKLines = new ArrayList<>();
-        for (int i : type) {
-            this.coinKLines.add(new CoinKLine(lan, symbol, i, 0));
+        this.type = type;
+        for (Dimension i : type) {
+            this.coinKLines.add(new CoinKLine(lan, symbol, i.getType(), 0));
         }
 
     }
@@ -31,7 +33,7 @@ public class CoinInfo {
      * @param symbol
      * @param type
      */
-    public CoinInfo(String lan, String market, String coin, String symbol, int[] type) {
+    public CoinInfo(String lan, String market, String coin, String symbol, Dimension[] type) {
         this(lan, market, coin, symbol, 50, type);
     }
 

@@ -46,7 +46,8 @@ public class DataFetchWorker implements Runnable {
     @Override
     public void run() {
         synchronized (DataFetchWorker.class) {
-            for (CoinInfo.CoinKLine coinKLine : coinKLineParams) {
+            for(int i=0;i<coinKLineParams.size();i++){
+                CoinInfo.CoinKLine coinKLine = coinKLineParams.get(i);
                 JsonParam klineParam = new JsonParam();
                 klineParam.put(coinKLine);
                 if (!Config.DEBUG) {
@@ -61,7 +62,7 @@ public class DataFetchWorker implements Runnable {
                     }
                     for (StrategyDealWrapper strategyDealWrapper : strategyDealWrappers) {
                         if (strategyDealWrapper != null && strategyDealWrapper.getStrategy() != null) {
-                            if (strategyDealWrapper.getStrategy().onHandle(coinInfo,coinKLine.type, kLine, tradesInfo, depthInfo, strategyDealWrapper.getDealHandle())) {
+                            if (strategyDealWrapper.getStrategy().onHandle(coinInfo, coinInfo.type[i], kLine, tradesInfo, depthInfo, strategyDealWrapper.getDealHandle())) {
                                 break;
                             }
                         }
@@ -73,7 +74,7 @@ public class DataFetchWorker implements Runnable {
                     DepthInfo depthInfo = coinDepthService.request(Method.POST, Config.GET_DEPTHINFO_URL, coinDepthTradesParams, DepthInfo.class).getDepthInfo();
                     for (StrategyDealWrapper strategyDealWrapper : strategyDealWrappers) {
                         if (strategyDealWrapper != null && strategyDealWrapper.getStrategy() != null) {
-                            if (strategyDealWrapper.getStrategy().onTestHandle(coinInfo, coinKLine.type,kLine, tradesInfo, depthInfo)) {
+                            if (strategyDealWrapper.getStrategy().onTestHandle(coinInfo, coinInfo.type[i],kLine, tradesInfo, depthInfo)) {
                                 break;
                             }
                         }
